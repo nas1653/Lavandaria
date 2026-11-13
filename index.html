@@ -160,6 +160,24 @@ button.btn { font: inherit; font-weight: 600; cursor: pointer; justify-self: sta
 .lf { display: grid; grid-template-columns: 1fr 1.15fr; gap: 24px; align-items: start; }
 .lf .steps { grid-template-columns: 1fr; }
 
+/* objetos encontrados: etiquetas de guarda-volumes */
+.found-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.found-tools input { flex: 1 1 240px; min-width: 0; width: auto; }
+.found-tools select { width: auto; }
+.found-count { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.found { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; list-style: none; padding: 0; margin: 0; }
+.ftag { position: relative; background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--teal); border-radius: 4px 4px var(--r) var(--r); padding: 16px 18px 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.ftag::after { content: ""; position: absolute; top: 12px; right: 14px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); background: var(--bg); }
+.ftag .ref { font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 600; letter-spacing: .06em; color: var(--teal-ink); }
+.ftag h3 { font-size: 18px; overflow-wrap: anywhere; }
+.ftag dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; font-size: 14px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.ftag dt { color: var(--muted); }
+.ftag dd { margin: 0; font-variant-numeric: tabular-nums; }
+.ftag dd.soon { color: var(--closed); font-weight: 600; }
+.ftag .btn { justify-self: start; padding: 7px 14px; font-size: 15px; cursor: pointer; background: none; font-family: inherit; }
+.found-empty { background: var(--card); border: 1px dashed var(--line); border-radius: var(--r); padding: 26px 20px; display: grid; gap: 6px; justify-items: center; text-align: center; color: var(--muted); }
+.found-empty strong { color: var(--fg); font-family: var(--font-display); font-size: 18px; font-weight: 600; }
+
 footer { background: var(--char-2); color: #c3c8cc; font-size: 14px; }
 footer .wrap { padding-block: 28px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
 
@@ -373,6 +391,16 @@ footer .wrap { padding-block: 28px; display: flex; flex-wrap: wrap; justify-cont
     <h1 class="h1">Esqueceu-se de alguma coisa?</h1>
     <p class="lead">Uma meia no fundo do secador, um casaco numa cadeira, as chaves em cima da mesa de dobrar. Tudo o que encontramos nas lojas fica guardado à sua espera.</p>
   </div>
+  <div class="stack" id="achados">
+    <h2 class="h2">Objetos encontrados nas lojas</h2>
+    <p class="note">Por segurança, não mostramos fotografias nem pormenores que só o dono conhece. Se reconhecer alguma coisa, carregue em “É meu” e diga-nos o número da etiqueta.</p>
+    <div class="found-tools">
+      <input id="fd-q" type="search" placeholder="Procurar: casaco, chaves, azul…" aria-label="Procurar objetos encontrados">
+      <select id="fd-loja" aria-label="Filtrar por loja"><option value="">Todas as lojas</option></select>
+      <span class="found-count" id="fd-count" aria-live="polite"></span>
+    </div>
+    <ul class="found" id="fd-list"></ul>
+  </div>
   <div class="lf">
     <div class="stack">
       <h2 class="h2">Como recuperar</h2>
@@ -545,6 +573,69 @@ document.getElementById("lfform").addEventListener("submit", e => {
     .catch(() => say("Não foi possível enviar. Ligue-nos para o 932 345 729 ou 914 341 904.", true))
     .finally(() => { b.disabled = false; });
 });
+
+/* ============ OBJETOS ENCONTRADOS ============
+   Para acrescentar um objeto, junte uma linha a ACHADOS.
+   loja: arroios | chile | areeiro | ericeira · data: dia em que foi encontrado (AAAA-MM-DD)
+   Cada objeto deixa de aparecer sozinho 30 dias depois dessa data.
+   Exemplo:
+   { ref: "A-0142", loja: "arroios", data: "2026-11-10", tipo: "Roupa", descricao: "Camisola de lã azul" },
+*/
+const ACHADOS = [
+];
+const GUARDA_DIAS = 30;
+(function () {
+  const list = document.getElementById("fd-list"), q = document.getElementById("fd-q"),
+        sel = document.getElementById("fd-loja"), count = document.getElementById("fd-count");
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const today = () => { try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(new Date()); } catch (e) { return new Date().toISOString().slice(0, 10); } };
+  const addDays = (d, n) => { const t = new Date(d + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+  const fmt = d => d.split("-").reverse().join("/");
+  const store = id => STORES.find(s => s.id === id);
+  sel.innerHTML += STORES.map(s => `<option value="${s.id}">${s.area}</option>`).join("");
+
+  function render() {
+    const now = today(), soon = addDays(now, 5), term = norm(q.value);
+    const live = ACHADOS.map(a => ({ ...a, ate: addDays(a.data, GUARDA_DIAS) }))
+      .filter(a => a.ate >= now).sort((a, b) => b.data.localeCompare(a.data));
+    const shown = live.filter(a => (!sel.value || a.loja === sel.value) &&
+      (!term || norm([a.ref, a.tipo, a.descricao, store(a.loja)?.area].join(" ")).includes(term)));
+    count.textContent = live.length ? `${shown.length} de ${live.length} ${live.length === 1 ? "objeto" : "objetos"}` : "";
+    if (!live.length) {
+      list.innerHTML = `<li class="found-empty"><strong>Não temos objetos por levantar neste momento</strong><span>Se perdeu alguma coisa numa das nossas lojas, comunique-nos pelo formulário abaixo e vamos procurar.</span></li>`;
+      return;
+    }
+    if (!shown.length) {
+      list.innerHTML = `<li class="found-empty"><strong>Nenhum objeto corresponde à pesquisa</strong><span>Experimente outra palavra ou outra loja. Pode também comunicar o que perdeu pelo formulário abaixo.</span></li>`;
+      return;
+    }
+    list.innerHTML = shown.map(a => `<li class="ftag">
+      <span class="ref">Nº ${esc(a.ref)}</span>
+      <h3 class="h3">${esc(a.descricao)}</h3>
+      <dl>
+        <dt>Tipo</dt><dd>${esc(a.tipo || "Outro")}</dd>
+        <dt>Loja</dt><dd>${esc(store(a.loja)?.area || "—")}</dd>
+        <dt>Encontrado</dt><dd>${fmt(a.data)}</dd>
+        <dt>Guardado até</dt><dd class="${a.ate <= soon ? "soon" : ""}">${fmt(a.ate)}</dd>
+      </dl>
+      <button class="btn ghost" type="button" data-ref="${esc(a.ref)}">É meu</button>
+    </li>`).join("");
+  }
+  list.addEventListener("click", e => {
+    const b = e.target.closest("[data-ref]"); if (!b) return;
+    const a = ACHADOS.find(x => x.ref === b.dataset.ref); if (!a) return;
+    const loja = document.getElementById("lf-loja"), desc = document.getElementById("lf-desc");
+    loja.value = store(a.loja)?.area || "Não sei";
+    desc.value = `Etiqueta Nº ${a.ref}: ${a.descricao}. `;
+    if (a.data) document.getElementById("lf-data").value = a.data;
+    document.getElementById("lfform").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    document.getElementById("lf-nome").focus({ preventScroll: true });
+  });
+  q.addEventListener("input", render);
+  sel.addEventListener("change", render);
+  render();
+})();
 </script>
 
 </body>
