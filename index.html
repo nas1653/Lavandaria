@@ -159,6 +159,18 @@ button.btn { font: inherit; font-weight: 600; cursor: pointer; justify-self: sta
 /* lost & found */
 .lf { display: grid; grid-template-columns: 1fr 1.15fr; gap: 24px; align-items: start; }
 .lf .steps { grid-template-columns: 1fr; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: inherit; font-size: 14px; font-weight: 600; padding: 6px 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; }
+.chip:hover { border-color: var(--teal); }
+.chip[aria-pressed="true"] { background: var(--teal); border-color: var(--teal); color: #fff; }
+.chip small { font-size: 12px; opacity: .75; margin-left: 4px; }
+.gal { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+.item { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: grid; grid-template-rows: auto 1fr; }
+.item img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--teal-soft); }
+.item .in { padding: 14px; display: grid; gap: 6px; align-content: start; }
+.item .meta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.item .mine { font: inherit; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 6px; border: 2px solid var(--teal); background: none; color: var(--teal-ink); cursor: pointer; justify-self: start; margin-top: 4px; }
+.gal .empty { grid-column: 1 / -1; background: var(--card); border: 1px dashed var(--line); border-radius: var(--r); padding: 22px; color: var(--muted); }
 
 footer { background: var(--char-2); color: #c3c8cc; font-size: 14px; }
 footer .wrap { padding-block: 28px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
@@ -373,7 +385,13 @@ footer .wrap { padding-block: 28px; display: flex; flex-wrap: wrap; justify-cont
     <h1 class="h1">Esqueceu-se de alguma coisa?</h1>
     <p class="lead">Uma meia no fundo do secador, um casaco numa cadeira, as chaves em cima da mesa de dobrar. Tudo o que encontramos nas lojas fica guardado à sua espera.</p>
   </div>
-  <div class="lf">
+  <div class="stack" id="galeria">
+    <h2 class="h2">Encontrado nas lojas</h2>
+    <div class="chips" role="group" aria-label="Filtrar por lavandaria" data-chips></div>
+    <div class="gal" data-gal></div>
+    <p class="note">Mostramos os objetos encontrados nos últimos 30 dias. Carteiras, documentos, telemóveis e outros objetos de valor não aparecem aqui: se perdeu um, comunique-o no formulário abaixo.</p>
+  </div>
+  <div class="lf" id="comunicar">
     <div class="stack">
       <h2 class="h2">Como recuperar</h2>
       <ol class="steps">
@@ -544,6 +562,41 @@ document.getElementById("lfform").addEventListener("submit", e => {
     .then(r => { if (!r.ok) throw 0; f.reset(); say("Recebemos o seu pedido. Vamos procurar e entramos em contacto consigo."); })
     .catch(() => say("Não foi possível enviar. Ligue-nos para o 932 345 729 ou 914 341 904.", true))
     .finally(() => { b.disabled = false; });
+});
+
+/* Galeria de achados: lê achados/achados.json */
+let ACHADOS = [], galFilter = "todas";
+const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const areaOf = id => (STORES.find(s => s.id === id) || {}).area || id;
+const fmtDate = d => { const [y, m, dd] = d.split("-"); return `${dd}/${m}/${y}`; };
+function renderGal() {
+  const counts = id => ACHADOS.filter(a => id === "todas" || a.loja === id).length;
+  document.querySelector("[data-chips]").innerHTML = [{ id: "todas", area: "Todas" }, ...STORES].map(s =>
+    `<button class="chip" type="button" data-loja="${s.id}" aria-pressed="${s.id === galFilter}">${esc(s.area)}<small>${counts(s.id)}</small></button>`).join("");
+  const list = ACHADOS.filter(a => galFilter === "todas" || a.loja === galFilter);
+  document.querySelector("[data-gal]").innerHTML = list.length ? list.map((a, i) =>
+    `<article class="item">${a.foto ? `<img src="${esc(a.foto)}" alt="${esc(a.descricao)}" loading="lazy">` : ""}<div class="in">
+      <h3 class="h3">${esc(a.descricao)}</h3>
+      <span class="meta">${esc(areaOf(a.loja))} · encontrado a ${esc(fmtDate(a.data))}</span>
+      <button class="mine" type="button" data-i="${ACHADOS.indexOf(a)}">É meu</button></div></article>`).join("")
+    : `<p class="empty">${galFilter === "todas" ? "De momento não temos objetos por levantar." : "De momento não temos objetos por levantar nesta loja."} Se perdeu alguma coisa, comunique-o no formulário abaixo: há objetos que não mostramos aqui.</p>`;
+}
+document.querySelector("[data-chips]").addEventListener("click", e => {
+  const c = e.target.closest(".chip"); if (!c) return; galFilter = c.dataset.loja; renderGal();
+});
+document.querySelector("[data-gal]").addEventListener("click", e => {
+  const b = e.target.closest(".mine"); if (!b) return;
+  const a = ACHADOS[+b.dataset.i];
+  document.getElementById("lf-loja").value = areaOf(a.loja);
+  document.getElementById("lf-desc").value = `Acho que é meu: ${a.descricao} (encontrado a ${fmtDate(a.data)}). `;
+  document.getElementById("comunicar").scrollIntoView({ behavior: "smooth" });
+  document.getElementById("lf-nome").focus({ preventScroll: true });
+});
+fetch("achados/achados.json", { cache: "no-store" }).then(r => r.ok ? r.json() : []).catch(() => []).then(list => {
+  const cutoff = Date.now() - 30 * 864e5;
+  ACHADOS = (Array.isArray(list) ? list : []).filter(a => a && a.descricao && /^\d{4}-\d{2}-\d{2}$/.test(a.data) && Date.parse(a.data) >= cutoff)
+    .sort((x, y) => y.data.localeCompare(x.data));
+  renderGal();
 });
 </script>
 
