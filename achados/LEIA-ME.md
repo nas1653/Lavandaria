@@ -40,5 +40,5 @@ Os objetos com mais de 30 dias deixam de aparecer sozinhos, mesmo que fiquem na 
 
 ## Objetos de valor
 
-Não ponha na galeria carteiras, documentos, telemóveis, chaves ou cartões.
+Não ponha na galeria carteiras, documentos, telemóveis ou cartões.
 Assim, só quem os perdeu os consegue descrever ao balcão.
