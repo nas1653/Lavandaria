@@ -149,11 +149,16 @@ th.p { text-align: right; }
 form { display: grid; gap: 12px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 label { display: grid; gap: 4px; font-size: 14px; font-weight: 600; }
-input, textarea { font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); width: 100%; }
+input, textarea, select { font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); width: 100%; }
 textarea { min-height: 120px; resize: vertical; }
 button.btn { font: inherit; font-weight: 600; cursor: pointer; justify-self: start; }
 .note { font-size: 14px; color: var(--muted); }
 .formmsg { font-size: 15px; color: var(--ok); font-weight: 600; }
+.hp { position: absolute; left: -9999px; }
+
+/* lost & found */
+.lf { display: grid; grid-template-columns: 1fr 1.15fr; gap: 24px; align-items: start; }
+.lf .steps { grid-template-columns: 1fr; }
 
 footer { background: var(--char-2); color: #c3c8cc; font-size: 14px; }
 footer .wrap { padding-block: 28px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
@@ -163,7 +168,7 @@ footer .wrap { padding-block: 28px; display: flex; flex-wrap: wrap; justify-cont
   .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
-  .hero, .band, .detail, .contact, .svc, .svc article.feature { grid-template-columns: 1fr; }
+  .hero, .band, .detail, .contact, .lf, .svc, .svc article.feature { grid-template-columns: 1fr; }
   .band img { min-height: 200px; }
   nav a { padding: 6px 9px; font-size: 14px; }
 }
@@ -189,6 +194,7 @@ footer .wrap { padding-block: 28px; display: flex; flex-wrap: wrap; justify-cont
       <li><a href="#servicos">Serviços</a></li>
       <li><a href="#precos">Preços</a></li>
       <li><a href="#lojas">Lojas</a></li>
+      <li><a href="#perdidos">Perdidos e achados</a></li>
       <li><a href="#contacto">Contacto</a></li>
     </ul></nav>
   </div>
@@ -360,6 +366,48 @@ footer .wrap { padding-block: 28px; display: flex; flex-wrap: wrap; justify-cont
   </div>
 </section>
 
+<!-- ============ PERDIDOS E ACHADOS ============ -->
+<section class="page" id="p-perdidos" data-route="perdidos" hidden>
+  <div class="stack">
+    <span class="eyebrow">Perdidos e achados</span>
+    <h1 class="h1">Esqueceu-se de alguma coisa?</h1>
+    <p class="lead">Uma meia no fundo do secador, um casaco numa cadeira, as chaves em cima da mesa de dobrar. Tudo o que encontramos nas lojas fica guardado à sua espera.</p>
+  </div>
+  <div class="lf">
+    <div class="stack">
+      <h2 class="h2">Como recuperar</h2>
+      <ol class="steps">
+        <li><h3 class="h3">Diga-nos o que perdeu</h3><p>Preencha o formulário ou ligue-nos. Indique a loja, o dia e uma descrição da peça ou do objeto.</p></li>
+        <li><h3 class="h3">Nós procuramos</h3><p>Verificamos o que foi encontrado nessa loja e respondemos por telefone ou email.</p></li>
+        <li><h3 class="h3">Levante na loja</h3><p>Se estiver connosco, combinamos a entrega. Para objetos de valor, como carteiras, telemóveis ou chaves, podemos pedir-lhe que os descreva em pormenor.</p></li>
+      </ol>
+      <p class="note">Guardamos os objetos encontrados durante 30 dias. Depois disso, a roupa é doada a uma instituição e os documentos são entregues à PSP.</p>
+    </div>
+    <div class="cbox">
+      <h2 class="h3">Comunicar um objeto perdido</h2>
+      <form id="lfform" name="perdidos-e-achados" method="POST" data-netlify="true" netlify-honeypot="empresa" novalidate>
+        <input type="hidden" name="form-name" value="perdidos-e-achados">
+        <label class="hp" aria-hidden="true">Não preencher<input name="empresa" tabindex="-1" autocomplete="off"></label>
+        <div class="row2">
+          <label for="lf-nome">Nome<input id="lf-nome" name="nome" autocomplete="name" required></label>
+          <label for="lf-tel">Telefone<input id="lf-tel" name="telefone" type="tel" autocomplete="tel"></label>
+        </div>
+        <label for="lf-email">Email<input id="lf-email" name="email" type="email" autocomplete="email" required></label>
+        <div class="row2">
+          <label for="lf-loja">Loja<select id="lf-loja" name="loja" required>
+            <option value="">Escolha a loja</option>
+            <option>Arroios</option><option>Praça do Chile</option><option>Areeiro</option><option>Ericeira</option><option>Não sei</option>
+          </select></label>
+          <label for="lf-data">Dia em que esteve na loja<input id="lf-data" name="data" type="date"></label>
+        </div>
+        <label for="lf-desc">O que perdeu?<textarea id="lf-desc" name="descricao" placeholder="Ex.: camisola de lã azul, tamanho M, com riscas brancas" required></textarea></label>
+        <button class="btn solid" type="submit">Enviar</button>
+        <p class="formmsg" id="lfmsg" role="status" hidden></p>
+      </form>
+    </div>
+  </div>
+</section>
+
 <!-- ============ CONTACTO ============ -->
 <section class="page" id="p-contacto" data-route="contacto" hidden>
   <div class="stack">
@@ -454,7 +502,7 @@ function renderStore(s) {
   f("map").href = mapUrl(s);
   const st = status(s); f("status").className = "status " + st.cls; f("status").textContent = st.txt;
 }
-const ROUTES = ["inicio", "servicos", "precos", "lojas", "contacto"];
+const ROUTES = ["inicio", "servicos", "precos", "lojas", "perdidos", "contacto"];
 function route() {
   let r = location.hash.slice(1) || "inicio";
   const store = STORES.find(s => s.id === r);
@@ -465,7 +513,7 @@ function route() {
   const navKey = store ? "lojas" : r;
   document.querySelectorAll("nav a").forEach(a => a.removeAttribute("aria-current"));
   document.querySelectorAll("nav a").forEach(a => { if (a.getAttribute("href") === "#" + navKey) a.setAttribute("aria-current", "page"); });
-  const names = { inicio: "Lavandarias Navegantes", servicos: "Serviços", precos: "Preços", lojas: "Lojas", contacto: "Contacto" };
+  const names = { inicio: "Lavandarias Navegantes", servicos: "Serviços", precos: "Preços", lojas: "Lojas", perdidos: "Perdidos e achados", contacto: "Contacto" };
   document.title = store ? `${store.name} · Lavandarias Navegantes` : (r === "inicio" ? names.inicio : `${names[r]} · Lavandarias Navegantes`);
   window.scrollTo(0, 0);
 }
@@ -485,6 +533,17 @@ document.getElementById("cform").addEventListener("submit", e => {
   const f = e.target, m = document.getElementById("formmsg");
   if (!f.checkValidity()) { m.style.color = "var(--closed)"; m.textContent = "Preencha o nome, um email válido e a mensagem."; m.hidden = false; return; }
   m.style.color = ""; m.textContent = "Esta é uma pré-visualização: no site final, a mensagem seguirá para navegantes.lavandaria@gmail.com."; m.hidden = false;
+});
+document.getElementById("lfform").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = e.target, m = document.getElementById("lfmsg"), b = f.querySelector("button");
+  const say = (txt, bad) => { m.style.color = bad ? "var(--closed)" : ""; m.textContent = txt; m.hidden = false; };
+  if (!f.checkValidity()) return say("Preencha o nome, um email válido, a loja e a descrição do que perdeu.", true);
+  b.disabled = true;
+  fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(new FormData(f)).toString() })
+    .then(r => { if (!r.ok) throw 0; f.reset(); say("Recebemos o seu pedido. Vamos procurar e entramos em contacto consigo."); })
+    .catch(() => say("Não foi possível enviar. Ligue-nos para o 932 345 729 ou 914 341 904.", true))
+    .finally(() => { b.disabled = false; });
 });
 </script>
 
