@@ -1,5 +1,20 @@
 # Galeria de perdidos e achados
 
+## Forma rápida: página de gestão no telemóvel
+
+Abra **lavandariasnavegantes.pt/admin.html**, entre com a palavra-passe e:
+
+1. Toque em **Tirar fotografia**.
+2. Toque no **microfone** e diga o que é, a loja e o dia, por exemplo «chave prateada, em Arroios, ontem».
+3. Toque em **Publicar no site**. Aparece logo na galeria.
+
+Quando o dono levantar o objeto, toque em **Levantado** na lista.
+
+A palavra-passe é a variável `ADMIN_PASSWORD` no Netlify
+(Site configuration → Environment variables). Para a mudar, altere-a lá e faça um novo deploy.
+
+## Forma antiga: pelo GitHub
+
 A galeria da página **Perdidos e achados** lê a lista do ficheiro `achados.json`, nesta pasta.
 
 ## Acrescentar um objeto

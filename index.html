@@ -592,7 +592,9 @@ document.querySelector("[data-gal]").addEventListener("click", e => {
   document.getElementById("comunicar").scrollIntoView({ behavior: "smooth" });
   document.getElementById("lf-nome").focus({ preventScroll: true });
 });
-fetch("achados/achados.json", { cache: "no-store" }).then(r => r.ok ? r.json() : []).catch(() => []).then(list => {
+const getList = url => fetch(url, { cache: "no-store" }).then(r => r.ok ? r.json() : []).catch(() => []).then(l => Array.isArray(l) ? l : []);
+/* Objetos publicados na página de gestão (/admin) e, por compatibilidade, os de achados.json */
+Promise.all([getList("/api/achados"), getList("achados/achados.json")]).then(([a, b]) => [...a, ...b]).then(list => {
   const cutoff = Date.now() - 30 * 864e5;
   ACHADOS = (Array.isArray(list) ? list : []).filter(a => a && a.descricao && /^\d{4}-\d{2}-\d{2}$/.test(a.data) && Date.parse(a.data) >= cutoff)
     .sort((x, y) => y.data.localeCompare(x.data));
